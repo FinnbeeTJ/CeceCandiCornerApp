@@ -1,0 +1,7 @@
+001,Star Gazer,10,12.50,In Stock
+002,Ocean Wave,5,9.99,In Stock
+003,Friendship,0,7.00,Out of Stock
+004,Galaxy,15,14.99,In Stock
+005,Bohemian Dream,8,11.25,In Stock
+006,Mystic Pearl,2,18.00,In Stock
+007,Summer Vibes,6,8.50,In Stock

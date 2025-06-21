@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="CeceCandiCornerApp:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/CeceCandiCornerApp_jar</output-path>
+    <root id="archive" name="CeceCandiCornerApp.jar">
+      <element id="module-output" name="CeceCandiCornerApp" />
+    </root>
+  </artifact>
+</component>
