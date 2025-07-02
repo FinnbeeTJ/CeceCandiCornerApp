@@ -2,6 +2,7 @@ Cece's Candi Corner Inventory System
 
 Hey there! This is the inventory management system I built for Cece's Candi Corner. It's a simple desktop app designed to help keep track of all those lovely bracelets without needing physical order forms anymore!
 
+
 What it Does
 Basically, this app lets you:
 
@@ -19,11 +20,16 @@ Low Stock Reports: Get a quick report of any bracelets running low so you know w
 
 Dark Mode: Because who doesn't love a dark theme?
 
+
+
 How I Built It
 This app is made with:
 
 Java (JDK 17): The main programming language.
 JavaFX (SDK 17.0.15): This is what I used to make the actual window and buttons you see.
+
+
+
 
 Getting It Running on Your Computer
 You'll need Java 17 and JavaFX 17.0.15 installed.
@@ -41,6 +47,8 @@ Run it! Find CeceCandiCornerGUI.java and hit the green "Run" button.
 
 (If you're running from the command line, it's a bit more involved with --module-path arguments, but IntelliJ handles that for you.)
 
+
+
 How to Use It
 Start by loading data: Click "Load Data from File" and pick the data.txt file.
 
@@ -49,6 +57,8 @@ Play around: Try adding, removing, or updating bracelets. See how the "Status" c
 Check reports: Generate a low stock report to see what needs attention.
 
 Exit: When you're done, hit the "Exit" button.
+
+
 
 A Couple of Things to Note
 It forgets stuff: Right now, if you close the app, all your changes disappear. It's just working in memory.
