@@ -3,39 +3,46 @@
  * Represents a single bracelet item in the inventory for Cece's Candi Corner.
  * This class encapsulates the properties of a bracelet and provides methods
  * to access and modify these properties.
+ *
+ * This version has been updated to include JavaFX GUI capatibility
  */
-class Bracelet {
-    // Private fields to encapsulate the bracelet's data
-    private String id;
-    private String description;
-    private int quantity;
-    private double price;
-    private String status;
+
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+
+
+public class Bracelet {
+    // Private fields using JavaFX Properties for observability
+    private final SimpleStringProperty id;
+    private final SimpleStringProperty description;
+    private final SimpleIntegerProperty quantity;
+    private final SimpleDoubleProperty price;
+    private final SimpleStringProperty status;
 
     /**
      * Constructor to initialize a new Bracelet object.
-     * id The unique identifier for the bracelet.
-     * description A brief description or name of the bracelet.
-     * quantity The current stock quantity of the bracelet.
-     * price The selling price of the bracelet.
-     * status The stock status (e.g., "In Stock", "Out of Stock").
-     * Defaults to "In Stock" if not specified in the constructor call.
+     * @param id The unique identifier for the bracelet.
+     * @param description A brief description or name of the bracelet.
+     * @param quantity The current stock quantity of the bracelet.
+     * @param price The selling price of the bracelet.
+     * @param status The stock status (e.g., "In Stock", "Out of Stock").
      */
     public Bracelet(String id, String description, int quantity, double price, String status) {
-        this.id = id;
-        this.description = description;
-        this.quantity = quantity;
-        this.price = price;
-        this.status = status;
+        this.id = new SimpleStringProperty(id);
+        this.description = new SimpleStringProperty(description);
+        this.quantity = new SimpleIntegerProperty(quantity);
+        this.price = new SimpleDoubleProperty(price);
+        this.status = new SimpleStringProperty(status);
     }
 
-    // --- Getter Methods ---
+    // --- Getter Methods (returning raw values) ---
     /**
      * Retrieves the unique ID of the bracelet.
      * @return The bracelet's ID.
      */
     public String getId() {
-        return id;
+        return id.get();
     }
 
     /**
@@ -43,7 +50,7 @@ class Bracelet {
      * @return The bracelet's description.
      */
     public String getDescription() {
-        return description;
+        return description.get();
     }
 
     /**
@@ -51,7 +58,7 @@ class Bracelet {
      * @return The bracelet's quantity.
      */
     public int getQuantity() {
-        return quantity;
+        return quantity.get();
     }
 
     /**
@@ -59,7 +66,7 @@ class Bracelet {
      * @return The bracelet's price.
      */
     public double getPrice() {
-        return price;
+        return price.get();
     }
 
     /**
@@ -67,16 +74,58 @@ class Bracelet {
      * @return The bracelet's status.
      */
     public String getStatus() {
+        return status.get();
+    }
+
+    // --- Property Getter Methods (for TableView PropertyValueFactory) ---
+    /**
+     * Returns the SimpleStringProperty for the ID.
+     * @return The ID property.
+     */
+    public SimpleStringProperty idProperty() {
+        return id;
+    }
+
+    /**
+     * Returns the SimpleStringProperty for the description.
+     * @return The description property.
+     */
+    public SimpleStringProperty descriptionProperty() {
+        return description;
+    }
+
+    /**
+     * Returns the SimpleIntegerProperty for the quantity.
+     * @return The quantity property.
+     */
+    public SimpleIntegerProperty quantityProperty() {
+        return quantity;
+    }
+
+    /**
+     * Returns the SimpleDoubleProperty for the price.
+     * @return The price property.
+     */
+    public SimpleDoubleProperty priceProperty() {
+        return price;
+    }
+
+    /**
+     * Returns the SimpleStringProperty for the status.
+     * @return The status property.
+     */
+    public SimpleStringProperty statusProperty() {
         return status;
     }
 
-    // --- Setter Methods ---
+
+    // --- Setter Methods (setting raw values, which updates the property) ---
     /**
      * Sets a new quantity for the bracelet.
      * @param newQuantity The new quantity to set.
      */
     public void setQuantity(int newQuantity) {
-        this.quantity = newQuantity;
+        this.quantity.set(newQuantity);
     }
 
     /**
@@ -84,7 +133,7 @@ class Bracelet {
      * @param newPrice The new price to set.
      */
     public void setPrice(double newPrice) {
-        this.price = newPrice;
+        this.price.set(newPrice);
     }
 
     /**
@@ -92,7 +141,7 @@ class Bracelet {
      * @param newStatus The new status to set (e.g., "In Stock", "Out of Stock").
      */
     public void setStatus(String newStatus) {
-        this.status = newStatus;
+        this.status.set(newStatus);
     }
 
     /**
@@ -103,6 +152,6 @@ class Bracelet {
     @Override
     public String toString() {
         return String.format("ID: %s, Description: %s, Quantity: %d, Price: $%.2f, Status: %s",
-                id, description, quantity, price, status);
+                getId(), getDescription(), getQuantity(), getPrice(), getStatus());
     }
 }
