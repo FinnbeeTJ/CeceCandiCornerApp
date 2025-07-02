@@ -4,16 +4,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
+import java.io.File; // Keep for FileChooser usage in GUI, though not directly used here
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Scanner;
+import java.util.NoSuchElementException; // Keep if other tests use it, not directly needed here
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,8 +26,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Updating bracelet attributes (quantity, price, status) with validation
  * - Generating low stock reports
  *
- * It uses a temporary directory for file tests and captures system output
- * to verify print statements for validation errors and success messages.
+ * This version is updated to reflect the InventoryManager's methods
+ * now accepting direct string inputs instead of Scanner,
+ * and returning messages for GUI integration.
  */
 class InventoryManagerTest {
 
@@ -62,16 +61,6 @@ class InventoryManagerTest {
         System.setOut(originalOut);
     }
 
-    // --- Helper Methods for simulating user input ---
-    /**
-     * Creates a Scanner that reads from a given string, simulating user input.
-     * @param input The string to simulate as input.
-     * @return A Scanner instance.
-     */
-    private Scanner createScanner(String input) {
-        return new Scanner(new ByteArrayInputStream(input.getBytes()));
-    }
-
     // --- Test Cases ---
 
     @Test
@@ -83,11 +72,13 @@ class InventoryManagerTest {
         Files.writeString(testFilePath, fileContent);
 
         // Call the method under test
-        manager.readDataFromFile(testFilePath.toString());
+        String result = manager.readDataFromFile(testFilePath.toString());
 
         // Assertions
         assertEquals(2, manager.getInventory().size(), "Inventory should contain 2 bracelets after reading valid file.");
-        assertTrue(outContent.toString().contains("Successfully loaded 2 bracelets from"), "Success message should be printed.");
+        assertTrue(result.contains("Successfully loaded 2 bracelets from"), "Success message should be returned.");
+        // outContent is still useful for checking warnings from readDataFromFile, if any
+        assertFalse(outContent.toString().contains("Warning"), "No warnings expected for valid file.");
     }
 
     @Test
@@ -95,11 +86,11 @@ class InventoryManagerTest {
     void testReadFile_Negative_NonExistentFile() {
         // Try to read from a non-existent file path
         String nonExistentFilePath = tempDir.resolve("non_existent_file.txt").toString();
-        manager.readDataFromFile(nonExistentFilePath);
+        String result = manager.readDataFromFile(nonExistentFilePath);
 
         // Assertions
         assertTrue(manager.getInventory().isEmpty(), "Inventory should remain empty for non-existent file.");
-        assertTrue(outContent.toString().contains("Error: File not found at"), "Error message for file not found should be printed.");
+        assertTrue(result.contains("Error: File not found at"), "Error message for file not found should be returned.");
     }
 
     @Test
@@ -110,76 +101,62 @@ class InventoryManagerTest {
         Path testFilePath = tempDir.resolve("malformed_data.txt");
         Files.writeString(testFilePath, fileContent);
 
-        manager.readDataFromFile(testFilePath.toString());
+        String result = manager.readDataFromFile(testFilePath.toString());
 
         // Assertions
         assertTrue(manager.getInventory().isEmpty(), "Inventory should be empty if all lines are malformed or invalid.");
-        assertTrue(outContent.toString().contains("Warning: Invalid quantity"), "Warning for invalid quantity should be printed.");
-        assertTrue(outContent.toString().contains("Warning: Skipping malformed line"), "Warning for malformed line should be printed.");
+        assertTrue(result.contains("No valid bracelets found or loaded from"), "No valid bracelets message should be returned.");
+        assertTrue(result.contains("Warning: Invalid quantity"), "Warning for invalid quantity should be returned in message.");
+        assertTrue(result.contains("Warning: Skipping malformed line"), "Warning for malformed line should be returned in message.");
     }
 
     @Test
     @DisplayName("Test 2: Objects can be added - Affirmative (Valid New Bracelet)")
     void testAddBracelet_Positive() {
-        String input = "001\nNew Bracelet\n10\n25.50\n";
-        Scanner scanner = createScanner(input);
-        manager.addBracelet(scanner);
+        String id = "001";
+        String description = "New Bracelet";
+        String quantityStr = "10";
+        String priceStr = "25.50";
+
+        String result = manager.addBracelet(id, description, quantityStr, priceStr);
 
         assertEquals(1, manager.getInventory().size(), "Inventory should contain one bracelet after adding.");
         Bracelet addedBracelet = manager.getInventory().get(0);
         assertAll("New Bracelet Attributes",
-                () -> assertEquals("001", addedBracelet.getId()),
-                () -> assertEquals("New Bracelet", addedBracelet.getDescription()),
-                () -> assertEquals(10, addedBracelet.getQuantity()),
-                () -> assertEquals(25.50, addedBracelet.getPrice()),
+                () -> assertEquals(id, addedBracelet.getId()),
+                () -> assertEquals(description, addedBracelet.getDescription()),
+                () -> assertEquals(Integer.parseInt(quantityStr), addedBracelet.getQuantity()),
+                () -> assertEquals(Double.parseDouble(priceStr), addedBracelet.getPrice(), 0.001),
                 () -> assertEquals("In Stock", addedBracelet.getStatus())
         );
-        assertTrue(outContent.toString().contains("Successfully added:"), "Success message should be printed.");
+        assertTrue(result.contains("Successfully added:"), "Success message should be returned.");
     }
 
     @Test
     @DisplayName("Test 2: Objects can be added - Negative (Duplicate ID)")
     void testAddBracelet_Negative_DuplicateID() {
-        // First add a bracelet
-        manager.getInventory().add(new Bracelet("001", "Existing Bracelet", 5, 10.00, "In Stock"));
+        // First add a bracelet successfully
+        manager.addBracelet("001", "Existing Bracelet", "5", "10.00");
 
-        // Try to add another with the same ID, then provide valid details for a NEW ID
-        // The first ID will be rejected, and the method will re-prompt for ID, then other details.
-        String input = "001\n002\nDuplicate Bracelet\n2\n5.00\n"; // Duplicate ID, then new ID and valid details
-        Scanner scanner = createScanner(input);
-        manager.addBracelet(scanner);
+        // Try to add another with the same ID
+        String result = manager.addBracelet("001", "Duplicate Bracelet", "2", "5.00");
 
-        assertEquals(2, manager.getInventory().size(), "Inventory size should increase by 1 after adding a new valid bracelet.");
-        assertTrue(manager.getInventory().stream().anyMatch(b -> b.getId().equals("002")), "Bracelet with new ID '002' should be added.");
-        assertTrue(outContent.toString().contains("Error: A bracelet with this ID already exists."), "Error message for duplicate ID should be printed.");
-        assertTrue(outContent.toString().contains("Successfully added:"), "Success message for the newly added bracelet should be printed.");
+        assertEquals(1, manager.getInventory().size(), "Inventory size should not change for duplicate ID.");
+        assertTrue(result.contains("Error: A bracelet with this ID already exists."), "Error message for duplicate ID should be returned.");
     }
 
     @Test
     @DisplayName("Test 2: Objects can be added - Negative (Invalid Quantity)")
     void testAddBracelet_Negative_InvalidQuantity() {
-        // Simulate input with an invalid quantity, followed by a valid one.
-        // The method will loop and re-prompt for quantity.
-        String input = "001\nInvalid Qty Bracelet\n-5\n10\n20.00\n"; // Invalid -5, then valid 10
-        Scanner scanner = createScanner(input);
-        manager.addBracelet(scanner);
+        // Test with negative quantity
+        String resultNegative = manager.addBracelet("001", "Invalid Qty Bracelet", "-5", "20.00");
+        assertTrue(resultNegative.contains("Error: Quantity must be a valid non-negative integer."), "Error for negative quantity should be returned.");
+        assertTrue(manager.getInventory().isEmpty(), "Inventory should be empty after invalid add attempt.");
 
-        // Assertions: Should try to add with -5, fail, prompt again, then add with 10.
-        assertEquals(1, manager.getInventory().size(), "Inventory should add valid bracelet after retry.");
-        assertTrue(outContent.toString().contains("Error: Quantity cannot be negative."), "Error for negative quantity should be printed.");
-        assertTrue(outContent.toString().contains("Successfully added:"), "Success message should eventually be printed.");
-        assertEquals(10, manager.getInventory().get(0).getQuantity(), "Quantity should be the valid one after retry.");
-
-        // New scenario for invalid string quantity (resets manager and output for isolated test)
-        manager = new InventoryManager();
-        outContent.reset(); // Clear previous output
-        input = "002\nInvalid Str Qty Bracelet\nabc\n1\n30.00\n"; // Invalid 'abc', then valid 1
-        scanner = createScanner(input);
-        manager.addBracelet(scanner);
-
-        assertEquals(1, manager.getInventory().size(), "Inventory should add valid bracelet after retry with string.");
-        assertTrue(outContent.toString().contains("Error: Quantity must be a valid integer."), "Error for non-integer quantity should be printed.");
-        assertEquals(1, manager.getInventory().get(0).getQuantity(), "Quantity should be the valid one after retry with string.");
+        // Test with non-integer quantity
+        String resultNonInteger = manager.addBracelet("002", "Invalid Str Qty Bracelet", "abc", "30.00");
+        assertTrue(resultNonInteger.contains("Error: Quantity must be a valid non-negative integer."), "Error for non-integer quantity should be returned.");
+        assertTrue(manager.getInventory().isEmpty(), "Inventory should be empty after invalid add attempt.");
     }
 
     @Test
@@ -189,13 +166,11 @@ class InventoryManagerTest {
         manager.getInventory().add(b1);
         manager.getInventory().add(new Bracelet("002", "Another", 2, 5.00, "In Stock"));
 
-        String input = "001\n";
-        Scanner scanner = createScanner(input);
-        manager.removeBracelet(scanner);
+        String result = manager.removeBracelet("001");
 
         assertEquals(1, manager.getInventory().size(), "Inventory size should decrease by 1.");
         assertFalse(manager.getInventory().contains(b1), "Bracelet 001 should be removed.");
-        assertTrue(outContent.toString().contains("Successfully removed:"), "Success message should be printed.");
+        assertTrue(result.contains("Successfully removed:"), "Success message should be returned.");
     }
 
     @Test
@@ -203,12 +178,10 @@ class InventoryManagerTest {
     void testRemoveBracelet_Negative_NonExistentID() {
         manager.getInventory().add(new Bracelet("002", "Existing", 2, 5.00, "In Stock"));
 
-        String input = "999\n"; // Non-existent ID
-        Scanner scanner = createScanner(input);
-        manager.removeBracelet(scanner);
+        String result = manager.removeBracelet("999"); // Non-existent ID
 
         assertEquals(1, manager.getInventory().size(), "Inventory size should not change for non-existent ID.");
-        assertTrue(outContent.toString().contains("Error: Bracelet with ID '999' not found in inventory."), "Error message for non-existent ID should be printed.");
+        assertTrue(result.contains("Error: Bracelet with ID '999' not found in inventory."), "Error message for non-existent ID should be returned.");
     }
 
     @Test
@@ -216,16 +189,10 @@ class InventoryManagerTest {
     void testRemoveBracelet_Negative_EmptyID() {
         manager.getInventory().add(new Bracelet("002", "Existing", 2, 5.00, "In Stock"));
 
-        String input = "\n"; // Empty ID input, followed by Enter
-        Scanner scanner = createScanner(input);
-
-        // Ensure that trying to call nextLine on a closed or exhausted scanner doesn't happen
-        // Mocking System.in and Scanner behavior is tricky for multiple prompts.
-        // For this specific case, validateId handles it before Scanner tries to read more.
-        manager.removeBracelet(scanner);
+        String result = manager.removeBracelet(""); // Empty ID input
 
         assertEquals(1, manager.getInventory().size(), "Inventory size should not change for empty ID.");
-        assertTrue(outContent.toString().contains("Error: ID cannot be empty."), "Error message for empty ID should be printed.");
+        assertTrue(result.contains("Error: Bracelet ID cannot be empty."), "Error message for empty ID should be returned.");
     }
 
 
@@ -235,14 +202,11 @@ class InventoryManagerTest {
         Bracelet b1 = new Bracelet("001", "Update Qty", 5, 10.00, "In Stock");
         manager.getInventory().add(b1);
 
-        // Simulate input: ID, then choose 1 (Quantity), then new quantity
-        String input = "001\n1\n15\n";
-        Scanner scanner = createScanner(input);
-        manager.updateBracelet(scanner);
+        String result = manager.updateBracelet("001", "quantity", "15");
 
         assertEquals(15, b1.getQuantity(), "Quantity should be updated to 15.");
         assertEquals("In Stock", b1.getStatus(), "Status should remain 'In Stock'.");
-        assertTrue(outContent.toString().contains("Quantity updated."), "Success message should be printed.");
+        assertTrue(result.contains("Quantity updated."), "Success message should be returned.");
     }
 
     @Test
@@ -251,13 +215,11 @@ class InventoryManagerTest {
         Bracelet b1 = new Bracelet("001", "Update Qty", 5, 10.00, "In Stock");
         manager.getInventory().add(b1);
 
-        String input = "001\n1\n0\n"; // ID, update quantity, new quantity 0
-        Scanner scanner = createScanner(input);
-        manager.updateBracelet(scanner);
+        String result = manager.updateBracelet("001", "quantity", "0"); // New quantity 0
 
         assertEquals(0, b1.getQuantity(), "Quantity should be updated to 0.");
         assertEquals("Out of Stock", b1.getStatus(), "Status should change to 'Out of Stock'.");
-        assertTrue(outContent.toString().contains("Status automatically updated to 'Out of Stock'"), "Auto status update message should be printed.");
+        assertTrue(result.contains("Status automatically updated to 'Out of Stock'"), "Auto status update message should be returned.");
     }
 
     @Test
@@ -266,13 +228,11 @@ class InventoryManagerTest {
         Bracelet b1 = new Bracelet("001", "Update Qty", 0, 10.00, "Out of Stock");
         manager.getInventory().add(b1);
 
-        String input = "001\n1\n5\n"; // ID, update quantity, new quantity 5
-        Scanner scanner = createScanner(input);
-        manager.updateBracelet(scanner);
+        String result = manager.updateBracelet("001", "quantity", "5"); // New quantity 5
 
         assertEquals(5, b1.getQuantity(), "Quantity should be updated to 5.");
         assertEquals("In Stock", b1.getStatus(), "Status should change to 'In Stock'.");
-        assertTrue(outContent.toString().contains("Status automatically updated to 'In Stock'"), "Auto status update message should be printed.");
+        assertTrue(result.contains("Status automatically updated to 'In Stock'"), "Auto status update message should be returned.");
     }
 
 
@@ -282,13 +242,10 @@ class InventoryManagerTest {
         Bracelet b1 = new Bracelet("001", "Update Price", 5, 10.00, "In Stock");
         manager.getInventory().add(b1);
 
-        // Simulate input: ID, then choose 2 (Price), then new price
-        String input = "001\n2\n12.75\n";
-        Scanner scanner = createScanner(input);
-        manager.updateBracelet(scanner);
+        String result = manager.updateBracelet("001", "price", "12.75");
 
         assertEquals(12.75, b1.getPrice(), 0.001, "Price should be updated to 12.75.");
-        assertTrue(outContent.toString().contains("Price updated."), "Success message should be printed.");
+        assertTrue(result.contains("Price updated."), "Success message should be returned.");
     }
 
     @Test
@@ -297,13 +254,10 @@ class InventoryManagerTest {
         Bracelet b1 = new Bracelet("001", "Update Status", 5, 10.00, "In Stock");
         manager.getInventory().add(b1);
 
-        // Simulate input: ID, then choose 3 (Status), then new status
-        String input = "001\n3\nOut of Stock\n";
-        Scanner scanner = createScanner(input);
-        manager.updateBracelet(scanner);
+        String result = manager.updateBracelet("001", "status", "Out of Stock");
 
         assertEquals("Out of Stock", b1.getStatus(), "Status should be updated to 'Out of Stock'.");
-        assertTrue(outContent.toString().contains("Status updated."), "Success message should be printed.");
+        assertTrue(result.contains("Status updated."), "Success message should be returned.");
     }
 
     @Test
@@ -311,11 +265,9 @@ class InventoryManagerTest {
     void testUpdateBracelet_Negative_NonExistentID() {
         manager.getInventory().add(new Bracelet("001", "Existing", 5, 10.00, "In Stock"));
 
-        String input = "999\n"; // Non-existent ID
-        Scanner scanner = createScanner(input);
-        manager.updateBracelet(scanner);
+        String result = manager.updateBracelet("999", "quantity", "10"); // Non-existent ID
 
-        assertTrue(outContent.toString().contains("Error: Bracelet with ID '999' not found in inventory."), "Error message for non-existent ID should be printed.");
+        assertTrue(result.contains("Error: Bracelet with ID '999' not found in inventory."), "Error message for non-existent ID should be returned.");
     }
 
     @Test
@@ -324,15 +276,15 @@ class InventoryManagerTest {
         Bracelet b1 = new Bracelet("001", "Update Bad Qty", 5, 10.00, "In Stock");
         manager.getInventory().add(b1);
 
-        // Simulate input: ID, then choose 1 (Quantity), then bad quantity, then valid quantity
-        String input = "001\n1\nabc\n-5\n12\n"; // Try "abc", then "-5", then valid "12"
-        Scanner scanner = createScanner(input);
-        manager.updateBracelet(scanner);
+        // Test with non-integer quantity
+        String resultNonInteger = manager.updateBracelet("001", "quantity", "abc");
+        assertTrue(resultNonInteger.contains("Error: New quantity must be a valid non-negative integer."), "Error for non-integer should be returned.");
+        assertEquals(5, b1.getQuantity(), "Quantity should not change after invalid input.");
 
-        assertEquals(12, b1.getQuantity(), "Quantity should be updated to the final valid input.");
-        assertTrue(outContent.toString().contains("Error: Quantity must be a valid integer."), "Error for non-integer should be printed.");
-        assertTrue(outContent.toString().contains("Error: Quantity cannot be negative."), "Error for negative quantity should be printed.");
-        assertTrue(outContent.toString().contains("Quantity updated."), "Success message should be printed eventually.");
+        // Test with negative quantity
+        String resultNegative = manager.updateBracelet("001", "quantity", "-5");
+        assertTrue(resultNegative.contains("Error: New quantity must be a valid non-negative integer."), "Error for negative quantity should be returned.");
+        assertEquals(5, b1.getQuantity(), "Quantity should not change after invalid input.");
     }
 
     @Test
@@ -341,15 +293,15 @@ class InventoryManagerTest {
         Bracelet b1 = new Bracelet("001", "Update Bad Price", 5, 10.00, "In Stock");
         manager.getInventory().add(b1);
 
-        // Simulate input: ID, then choose 2 (Price), then bad price, then valid price
-        String input = "001\n2\nxyz\n-10.00\n15.50\n"; // Try "xyz", then "-10.00", then valid "15.50"
-        Scanner scanner = createScanner(input);
-        manager.updateBracelet(scanner);
+        // Test with non-numeric price
+        String resultNonNumeric = manager.updateBracelet("001", "price", "xyz");
+        assertTrue(resultNonNumeric.contains("Error: New price must be a valid non-negative number."), "Error for non-numeric should be returned.");
+        assertEquals(10.00, b1.getPrice(), 0.001, "Price should not change after invalid input.");
 
-        assertEquals(15.50, b1.getPrice(), 0.001, "Price should be updated to the final valid input.");
-        assertTrue(outContent.toString().contains("Error: Price must be a valid number."), "Error for non-numeric should be printed.");
-        assertTrue(outContent.toString().contains("Error: Price cannot be negative."), "Error for negative price should be printed.");
-        assertTrue(outContent.toString().contains("Price updated."), "Success message should be printed eventually.");
+        // Test with negative price
+        String resultNegative = manager.updateBracelet("001", "price", "-10.00");
+        assertTrue(resultNegative.contains("Error: New price must be a valid non-negative number."), "Error for negative price should be returned.");
+        assertEquals(10.00, b1.getPrice(), 0.001, "Price should not change after invalid input.");
     }
 
     @Test
@@ -358,14 +310,9 @@ class InventoryManagerTest {
         Bracelet b1 = new Bracelet("001", "Update Bad Status", 5, 10.00, "In Stock");
         manager.getInventory().add(b1);
 
-        // Simulate input: ID, then choose 3 (Status), then bad status, then valid status
-        String input = "001\n3\nWrongStatus\nAvailable\nIn Stock\n"; // Try "WrongStatus", "Available", then valid "In Stock"
-        Scanner scanner = createScanner(input);
-        manager.updateBracelet(scanner);
-
-        assertEquals("In Stock", b1.getStatus(), "Status should be updated to the final valid input.");
-        assertTrue(outContent.toString().contains("Error: Status must be 'In Stock' or 'Out of Stock'."), "Error for invalid status should be printed.");
-        assertTrue(outContent.toString().contains("Status updated."), "Success message should be printed eventually.");
+        String resultInvalid = manager.updateBracelet("001", "status", "WrongStatus");
+        assertTrue(resultInvalid.contains("Error: New status must be 'In Stock' or 'Out of Stock'."), "Error for invalid status should be returned.");
+        assertEquals("In Stock", b1.getStatus(), "Status should not change after invalid input.");
     }
 
     @Test
@@ -376,21 +323,12 @@ class InventoryManagerTest {
         manager.getInventory().add(new Bracelet("003", "Low Stock C", 1, 5.00, "Out of Stock"));
         manager.getInventory().add(new Bracelet("004", "Normal Stock D", 7, 20.00, "In Stock"));
 
-        String input = "5\n"; // Threshold of 5
-        Scanner scanner = createScanner(input);
-        manager.generateLowStockReport(scanner);
+        List<Bracelet> lowStockItems = manager.generateLowStockReport("5"); // Threshold of 5
 
-        String output = outContent.toString();
-        assertTrue(output.contains("--- Bracelets Below Stock Threshold (5) ---"), "Report header should be present.");
-        assertTrue(output.contains("ID: 003, Description: Low Stock C, Current Quantity: 1"), "Bracelet 003 should be in report.");
-        assertTrue(output.contains("ID: 001, Description: Low Stock A, Current Quantity: 2"), "Bracelet 001 should be in report.");
-        assertFalse(output.contains("ID: 002"), "Bracelet 002 should NOT be in report.");
-        assertFalse(output.contains("ID: 004"), "Bracelet 004 should NOT be in report.");
-
-        // Check order (sorted by quantity)
-        int index003 = output.indexOf("ID: 003");
-        int index001 = output.indexOf("ID: 001");
-        assertTrue(index003 < index001, "Low Stock C (qty 1) should appear before Low Stock A (qty 2).");
+        assertNotNull(lowStockItems, "Low stock items list should not be null.");
+        assertEquals(2, lowStockItems.size(), "Should find 2 items below threshold.");
+        assertEquals("003", lowStockItems.get(0).getId(), "Bracelet 003 (qty 1) should be first.");
+        assertEquals("001", lowStockItems.get(1).getId(), "Bracelet 001 (qty 2) should be second.");
     }
 
     @Test
@@ -399,32 +337,23 @@ class InventoryManagerTest {
         manager.getInventory().add(new Bracelet("001", "High Stock", 10, 10.00, "In Stock"));
         manager.getInventory().add(new Bracelet("002", "Medium Stock", 8, 15.00, "In Stock"));
 
-        String input = "5\n"; // Threshold of 5
-        Scanner scanner = createScanner(input);
-        manager.generateLowStockReport(scanner);
+        List<Bracelet> lowStockItems = manager.generateLowStockReport("5"); // Threshold of 5
 
-        assertTrue(outContent.toString().contains("No bracelets currently below the specified stock threshold of 5."), "Message for no low stock items should be printed.");
+        assertNotNull(lowStockItems, "Low stock items list should not be null.");
+        assertTrue(lowStockItems.isEmpty(), "No items should be below threshold.");
     }
 
     @Test
     @DisplayName("Test 5: Custom Action (Low Stock Report) - Negative (Invalid Threshold Input)")
     void testGenerateLowStockReport_Negative_InvalidThreshold() {
-        // Corrected: Add a bracelet that *will* be below the threshold of 3
         manager.getInventory().add(new Bracelet("001", "Low Stock Item", 2, 10.00, "In Stock"));
 
-        // Simulate input: Invalid string, then negative, then valid 3
-        // This input needs to match the re-prompting behavior of validateQuantity
-        String input = "abc\n-2\n3\n";
-        Scanner scanner = createScanner(input);
-        manager.generateLowStockReport(scanner);
+        // Test with non-integer threshold
+        List<Bracelet> resultInvalidString = manager.generateLowStockReport("abc");
+        assertNull(resultInvalidString, "Should return null for invalid string threshold.");
 
-        // The assertions should now reflect that a valid report *was* generated after retries
-        String output = outContent.toString();
-        assertTrue(output.contains("Error: Quantity must be a valid integer."), "Error for non-integer threshold should be printed.");
-        assertTrue(output.toString().contains("Error: Quantity cannot be negative."), "Error for negative threshold should be printed.");
-        assertTrue(output.toString().contains("--- Bracelets Below Stock Threshold (3) ---"), "Report header should be generated with valid threshold after retries.");
-        // Additionally, check that the specific low stock item is in the report
-        assertTrue(output.toString().contains("ID: 001, Description: Low Stock Item, Current Quantity: 2"), "The low stock item should be listed in the report.");
-        assertEquals(1, manager.getInventory().size(), "Inventory size should remain unchanged.");
+        // Test with negative threshold
+        List<Bracelet> resultNegative = manager.generateLowStockReport("-2");
+        assertNull(resultNegative, "Should return null for negative threshold.");
     }
 }
