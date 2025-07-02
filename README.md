@@ -1,4 +1,5 @@
 Cece's Candi Corner Inventory System
+
 Hey there! This is the inventory management system I built for Cece's Candi Corner. It's a simple desktop app designed to help keep track of all those lovely bracelets without needing physical order forms anymore!
 
 What it Does
