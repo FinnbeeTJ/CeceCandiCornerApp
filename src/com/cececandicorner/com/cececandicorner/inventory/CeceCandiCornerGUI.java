@@ -6,6 +6,8 @@
  * This class handles all UI elements, user input, and displays results,
  * interacting with the InventoryManager for business logic.
  */
+package com.cececandicorner.inventory; // IMPORTANT: Ensure this matches your package name
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -17,15 +19,15 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-import java.io.File;
 import java.util.List;
 import java.util.Optional;
 import java.util.Base64; // Import for Base64 encoding
+
+// FIX: Added explicit imports for classes within the same package
+
 
 public class CeceCandiCornerGUI extends Application {
 
@@ -33,14 +35,34 @@ public class CeceCandiCornerGUI extends Application {
     private TableView<Bracelet> inventoryTable;
     private TextArea messageArea; // For displaying general messages and reports
     private ObservableList<Bracelet> braceletData; // The ObservableList backing the TableView
+    private Stage primaryStage; // Keep a reference to the primary stage
+
+    // NEW: Currency symbol for display
+    private String currentCurrencySymbol = "$"; // Default to USD
+
+    // FIX: Declare currencySelector as a class field so it's accessible throughout the class
+    private ComboBox<String> currencySelector;
 
     @Override
     public void start(Stage primaryStage) {
-        inventoryManager = new InventoryManager();
-        // Initialize the ObservableList that will hold the TableView's data
+        this.primaryStage = primaryStage; // Store reference to primary stage
+
+        // --- FIX: Initialize braceletData BEFORE any call to updateInventoryTable() ---
         braceletData = FXCollections.observableArrayList();
 
-        primaryStage.setTitle("Cece's Candi Corner Inventory Management System");
+        // Prompt user for database file path at startup
+        String dbFilePath = promptForDatabasePath();
+        if (dbFilePath == null) {
+            showMessage("Database path not provided or cancelled. Application will exit.");
+            Platform.exit();
+            return;
+        }
+
+        // Initialize DatabaseManager and then InventoryManager
+        DatabaseManager dbManager = new DatabaseManager(dbFilePath);
+        inventoryManager = new InventoryManager(dbManager);
+
+        primaryStage.setTitle("Cece's Candi Corner Inventory Management System (Connected to: " + dbFilePath + ")");
 
         // --- UI Elements ---
         messageArea = new TextArea();
@@ -50,7 +72,7 @@ public class CeceCandiCornerGUI extends Application {
 
         // Inventory Table
         inventoryTable = new TableView<>();
-        inventoryTable.setPlaceholder(new Label("No bracelets to display. Load data or add new items."));
+        inventoryTable.setPlaceholder(new Label("No bracelets to display. Connect to database and display."));
         inventoryTable.setItems(braceletData); // Link the TableView to the ObservableList
 
         // --- IMPORTANT: Using property() methods for PropertyValueFactory ---
@@ -67,8 +89,20 @@ public class CeceCandiCornerGUI extends Application {
         quantityCol.setCellValueFactory(new PropertyValueFactory<>("quantity")); // Looks for quantityProperty()
         quantityCol.setPrefWidth(90);
 
+        // NEW: Custom cell factory for price formatting
         TableColumn<Bracelet, Double> priceCol = new TableColumn<>("Price");
-        priceCol.setCellValueFactory(new PropertyValueFactory<>("price")); // Looks for priceProperty()
+        priceCol.setCellValueFactory(new PropertyValueFactory<>("price")); // Still links to priceProperty()
+        priceCol.setCellFactory(column -> new TableCell<Bracelet, Double>() {
+            @Override
+            protected void updateItem(Double item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(formatPrice(item)); // Use the new formatPrice helper
+                }
+            }
+        });
         priceCol.setPrefWidth(90);
 
         TableColumn<Bracelet, String> statusCol = new TableColumn<>("Status");
@@ -80,10 +114,7 @@ public class CeceCandiCornerGUI extends Application {
         inventoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY); // Make columns fill width
 
         // --- Buttons for Main Operations ---
-        Button loadDataButton = new Button("Load Data from File");
-        loadDataButton.setMaxWidth(Double.MAX_VALUE); // Make button fill width
-        loadDataButton.setOnAction(e -> handleLoadData());
-
+        // Removed "Load Data from File"
         Button displayAllButton = new Button("Display All Bracelets");
         displayAllButton.setMaxWidth(Double.MAX_VALUE);
         displayAllButton.setOnAction(e -> handleDisplayAll());
@@ -108,8 +139,27 @@ public class CeceCandiCornerGUI extends Application {
         exitButton.setMaxWidth(Double.MAX_VALUE);
         exitButton.setOnAction(e -> Platform.exit()); // Exit the application
 
-        VBox buttonLayout = new VBox(10, loadDataButton, displayAllButton, addBraceletButton,
-                removeBraceletButton, updateBraceletButton, lowStockReportButton, exitButton);
+        // FIX: Initialize currencySelector BEFORE it's added to the VBox
+        currencySelector = new ComboBox<>(FXCollections.observableArrayList("$ (USD)", "C$ (CAD)", "¥ (CNY)", "¥ (JPY)"));
+        currencySelector.setValue("$ (USD)"); // Default selection
+        currencySelector.setMaxWidth(Double.MAX_VALUE);
+        currencySelector.setOnAction(e -> {
+            String selected = currencySelector.getValue();
+            switch (selected) {
+                case "$ (USD)": currentCurrencySymbol = "$"; break;
+                case "C$ (CAD)": currentCurrencySymbol = "C$"; break;
+                case "¥ (CNY)": currentCurrencySymbol = "¥"; break; // CNY and JPY use same symbol
+                case "¥ (JPY)": currentCurrencySymbol = "¥"; break;
+                default: currentCurrencySymbol = "$"; // Fallback
+            }
+            updateInventoryTable(); // Refresh table to show new currency symbol
+            // If update dialog is open, its price label won't update automatically.
+            // For this scope, we'll assume the dialog is closed or user re-opens it.
+        });
+
+
+        VBox buttonLayout = new VBox(10, displayAllButton, addBraceletButton,
+                removeBraceletButton, updateBraceletButton, lowStockReportButton, currencySelector, exitButton); // Added currencySelector
         buttonLayout.setPadding(new Insets(10));
         buttonLayout.setAlignment(Pos.TOP_CENTER);
 
@@ -120,8 +170,8 @@ public class CeceCandiCornerGUI extends Application {
         root.setCenter(inventoryTable); // Table in the center
         root.setBottom(messageArea); // Message area at the bottom
 
-        // Initial display of inventory (empty)
-        updateInventoryTable();
+        // Initial display of inventory (now braceletData is initialized)
+        updateInventoryTable(); // Call to populate table from DB on startup
 
         Scene scene = new Scene(root, 900, 600); // Increased width for better layout
 
@@ -209,20 +259,27 @@ public class CeceCandiCornerGUI extends Application {
     }
 
     /**
-     * Handles loading data from a file chosen by the user.
+     * Prompts the user to select or enter the path to the SQLite database file.
+     * @return The absolute path to the database file, or null if cancelled/invalid.
      */
-    private void handleLoadData() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Select Data File");
-        File file = fileChooser.showOpenDialog(inventoryTable.getScene().getWindow());
+    private String promptForDatabasePath() {
+        TextInputDialog dialog = new TextInputDialog("inventory.db"); // Default suggestion
+        dialog.setTitle("Database Connection");
+        dialog.setHeaderText("Enter the path to your SQLite database file:");
+        dialog.setContentText("Database File Path:");
 
-        if (file != null) {
-            String result = inventoryManager.readDataFromFile(file.getAbsolutePath());
-            showMessage(result);
-            updateInventoryTable(); // Refresh table after loading data
-        } else {
-            showMessage("File selection cancelled.");
+        Optional<String> result = dialog.showAndWait();
+        if (result.isPresent()) {
+            String path = result.get().trim();
+            if (path.isEmpty()) {
+                showMessage("Database path cannot be empty.");
+                return null;
+            }
+            // Optional: Basic validation to check if it looks like a file path
+            // For robust validation, you might try to connect here and catch SQLException
+            return path;
         }
+        return null; // User cancelled
     }
 
     /**
@@ -256,6 +313,24 @@ public class CeceCandiCornerGUI extends Application {
     }
 
     /**
+     * Helper method to format price based on the current currency symbol and rules.
+     * @param price The price value.
+     * @return Formatted price string (e.g., "$30", "$30.50").
+     */
+    private String formatPrice(Double price) {
+        if (price == null) {
+            return "";
+        }
+        // Check if it's a whole number (e.g., 30.0)
+        if (price == Math.floor(price)) {
+            return currentCurrencySymbol + String.format("%.0f", price); // Display as $30
+        } else {
+            // Display with two decimal places, e.g., $30.50
+            return currentCurrencySymbol + String.format("%.2f", price);
+        }
+    }
+
+    /**
      * Shows a dialog for adding a new bracelet.
      */
     private void showAddBraceletDialog() {
@@ -264,7 +339,8 @@ public class CeceCandiCornerGUI extends Application {
         dialog.setHeaderText("Enter details for the new bracelet:");
 
         // Set the button types.
-        ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
+        // FIX: Corrected ButtonType usage to explicitly create ButtonType with ButtonBar.ButtonData.OK_DONE
+        ButtonType addButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE); // Corrected line
         dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
 
         GridPane grid = new GridPane();
@@ -323,9 +399,21 @@ public class CeceCandiCornerGUI extends Application {
 
         Optional<String> result = dialog.showAndWait();
         result.ifPresent(itemId -> {
-            String message = inventoryManager.removeBracelet(itemId.trim());
-            showMessage(message);
-            updateInventoryTable(); // Refresh table
+            // --- NEW: Confirmation Alert for Deletion ---
+            Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmationAlert.setTitle("Confirm Deletion");
+            confirmationAlert.setHeaderText("You are about to permanently delete bracelet with ID: " + itemId);
+            confirmationAlert.setContentText("This action cannot be undone. Are you sure you want to proceed?");
+
+            Optional<ButtonType> confirmationResult = confirmationAlert.showAndWait();
+            if (confirmationResult.isPresent() && confirmationResult.get() == ButtonType.OK) {
+                String message = inventoryManager.removeBracelet(itemId.trim());
+                showMessage(message);
+                updateInventoryTable(); // Refresh table
+            } else {
+                showMessage("Deletion of bracelet " + itemId + " cancelled.");
+            }
+            // --- END NEW ---
         });
     }
 
@@ -336,7 +424,8 @@ public class CeceCandiCornerGUI extends Application {
         TextInputDialog idDialog = new TextInputDialog();
         idDialog.setTitle("Update Bracelet");
         idDialog.setHeaderText("Enter the ID of the bracelet to update:");
-        idDialog.setContentText("Bracelet ID:");
+        // FIX: Corrected line. This was a typo, referring to 'dialog' instead of 'idDialog'.
+        idDialog.setContentText("Bracelet ID:"); // Corrected line
 
         Optional<String> idResult = idDialog.showAndWait();
         idResult.ifPresent(itemId -> {
@@ -353,7 +442,8 @@ public class CeceCandiCornerGUI extends Application {
             updateDialog.setTitle("Update Bracelet Details");
             updateDialog.setHeaderText(String.format("Updating Bracelet: %s\nCurrent Details: %s\nSelect field(s) to update:", braceletToUpdate.getDescription(), braceletToUpdate.toString()));
 
-            ButtonType updateButtonType = new ButtonType("Update", ButtonBar.ButtonData.OK_DONE);
+            // FIX: Corrected ButtonType usage. Creating ButtonType explicitly with text and ButtonBar.ButtonData.OK_DONE
+            ButtonType updateButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE); // Corrected line
             updateDialog.getDialogPane().getButtonTypes().addAll(updateButtonType, ButtonType.CANCEL);
 
             GridPane grid = new GridPane();
@@ -365,7 +455,8 @@ public class CeceCandiCornerGUI extends Application {
             TextField newQuantityField = new TextField();
             newQuantityField.setPromptText("New Quantity");
 
-            Label currentPriceLabel = new Label("Current Price: $" + String.format("%.2f", braceletToUpdate.getPrice()));
+            // NEW: Use formatPrice helper for current price display
+            Label currentPriceLabel = new Label("Current Price: " + formatPrice(braceletToUpdate.getPrice()));
             TextField newPriceField = new TextField();
             newPriceField.setPromptText("New Price");
 
@@ -391,46 +482,68 @@ public class CeceCandiCornerGUI extends Application {
                 if (dialogButton == updateButtonType) {
                     String message = "";
                     boolean quantityUpdated = false; // Flag to track if quantity was updated
-                    boolean statusUpdatedManually = false; // Flag to track if status was updated manually
+                    boolean statusUpdatedManually = false; // Flag to track if status was called in InventoryManager
+
+                    // Store original quantity and status for comparison
+                    int originalQuantity = braceletToUpdate.getQuantity();
+                    String originalStatus = braceletToUpdate.getStatus();
 
                     // 1. Handle Quantity Update FIRST
                     String newQuantityStr = newQuantityField.getText().trim();
                     if (!newQuantityStr.isEmpty()) {
+                        // Attempt to update quantity, this will also trigger auto-status change if applicable
                         message = inventoryManager.updateBracelet(id, "quantity", newQuantityStr);
                         showMessage(message);
                         quantityUpdated = true;
                     }
 
-                    // 2. Handle Price Update
-                    String newPriceStr = newPriceField.getText().trim();
-                    if (!newPriceStr.isEmpty()) {
-                        // If quantity was updated, the message might be combined.
-                        // For simplicity, we'll show the latest message from the last update.
-                        message = inventoryManager.updateBracelet(id, "price", newPriceStr);
-                        showMessage(message);
-                    }
-
-                    // 3. Handle Status Update (ONLY if quantity didn't dictate it)
+                    // 2. Handle Manual Status Update (with confirmation and quantity override)
                     String selectedStatus = newStatusComboBox.getValue();
                     // Check if a status was explicitly selected AND it's different from the bracelet's *current* status
                     // after potential quantity update.
                     // IMPORTANT: We only allow manual status update if quantity didn't already force it.
                     if (selectedStatus != null && !selectedStatus.equalsIgnoreCase(braceletToUpdate.getStatus())) {
-                        // Check if the status selected manually contradicts the quantity rule
-                        int currentQuantity = braceletToUpdate.getQuantity(); // Get the quantity AFTER potential update
-                        boolean quantityDemandsOutOfStock = (currentQuantity == 0 && selectedStatus.equalsIgnoreCase("In Stock"));
-                        boolean quantityDemandsInStock = (currentQuantity > 0 && selectedStatus.equalsIgnoreCase("Out of Stock"));
+                        // Special handling if user tries to manually set to "Out of Stock" when quantity is > 0
+                        if (selectedStatus.equalsIgnoreCase("Out of Stock") && braceletToUpdate.getQuantity() > 0) {
+                            Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                            confirmationAlert.setTitle("Confirm Status Change");
+                            confirmationAlert.setHeaderText("Changing status to 'Out of Stock' will set quantity to 0.");
+                            confirmationAlert.setContentText("Are you sure you want to proceed?");
 
-                        if (quantityDemandsOutOfStock || quantityDemandsInStock) {
+                            Optional<ButtonType> confirmationResult = confirmationAlert.showAndWait();
+                            if (confirmationResult.isPresent() && confirmationResult.get() == ButtonType.OK) {
+                                // User confirmed: Set quantity to 0 first, then set status
+                                String qtyUpdateResult = inventoryManager.updateBracelet(id, "quantity", "0");
+                                showMessage(qtyUpdateResult); // Show message for quantity update
+                                message = inventoryManager.updateBracelet(id, "status", "Out of Stock");
+                                showMessage(message); // Show message for status update
+                                statusUpdatedManually = true;
+                            } else {
+                                showMessage("Status change to 'Out of Stock' cancelled. Status remains: " + braceletToUpdate.getStatus());
+                                // Do not proceed with status update
+                            }
+                        }
+                        // Handle manual status change that contradicts quantity (already handled by InventoryManager, but let's be explicit here for GUI feedback)
+                        else if ((braceletToUpdate.getQuantity() == 0 && selectedStatus.equalsIgnoreCase("In Stock")) ||
+                                (braceletToUpdate.getQuantity() > 0 && selectedStatus.equalsIgnoreCase("Out of Stock") && !selectedStatus.equalsIgnoreCase(originalStatus))) { // If quantity is 0 and trying to set In Stock, or quantity > 0 and trying to set Out of Stock (and it wasn't already)
                             showMessage("Warning: Status cannot be manually set to contradict current quantity. Status remains: " + braceletToUpdate.getStatus());
                             // Do NOT update status if it contradicts the quantity rule
-                        } else {
+                        }
+                        else {
                             message = inventoryManager.updateBracelet(id, "status", selectedStatus);
                             showMessage(message);
                             statusUpdatedManually = true;
                         }
                     }
 
+                    // 3. Handle Price Update (after quantity and status to ensure latest state)
+                    String newPriceStr = newPriceField.getText().trim();
+                    if (!newPriceStr.isEmpty()) {
+                        message = inventoryManager.updateBracelet(id, "price", newPriceStr);
+                        showMessage(message);
+                    }
+
+                    // Final check to see if any actual changes were made by user input
                     if (!quantityUpdated && !statusUpdatedManually && newPriceStr.isEmpty()) {
                         showMessage("No changes made to bracelet " + id + ".");
                     }

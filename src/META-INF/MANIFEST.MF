@@ -1,3 +1,4 @@
 Manifest-Version: 1.0
-Main-Class: CeceCandiCornerGUI
-
+Main-Class: com.cececandicorner.inventory.CeceCandiCornerGUI
+FX-Main-Class: com.cececandicorner.inventory.CeceCandiCornerGUI
+Automatic-Module-Name: CeceCandiCornerApp

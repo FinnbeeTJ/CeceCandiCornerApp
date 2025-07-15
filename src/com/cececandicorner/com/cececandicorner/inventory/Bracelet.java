@@ -1,17 +1,17 @@
+package com.cececandicorner.inventory;
+
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+
 /**
  * Bracelet.java
  * Represents a single bracelet item in the inventory for Cece's Candi Corner.
  * This class encapsulates the properties of a bracelet and provides methods
  * to access and modify these properties.
  *
- * This version has been updated to include JavaFX GUI capatibility
+ * This version uses JavaFX Properties to enable automatic UI updates in TableViews.
  */
-
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleStringProperty;
-
-
 public class Bracelet {
     // Private fields using JavaFX Properties for observability
     private final SimpleStringProperty id;
