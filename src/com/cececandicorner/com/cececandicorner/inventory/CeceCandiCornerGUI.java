@@ -1,13 +1,18 @@
 /**
- * Teddy Jones
- * CEN 3024C
- * Professor Evans
  * CeceCandiCornerGUI.java
  * This version has been updated to include JavaFX GUI compatibility (FKA CeceCandiCornerApp.java)
  * This is the main JavaFX application class for Cece's Candi Corner Inventory Management System.
  * It provides a graphical user interface for the user to interact with the InventoryManager.
  * This class handles all UI elements, user input, and displays results,
  * interacting with the InventoryManager for business logic.
+ * Role in System: This class serves as the primary user interface for the inventory system,
+ * allowing users to perform all CRUD operations and generate reports through a graphical window.
+ * It initializes the database connection and the core inventory management logic.
+ * Usage Example:
+ * To run the application, execute its main method. It will prompt for a database file path.
+ * @author Teddy Jones
+ * @author CEN3024C
+ * @author Professor Evans
  */
 package com.cececandicorner.inventory; // IMPORTANT: Ensure this matches your package name
 
@@ -29,9 +34,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Base64; // Import for Base64 encoding
 
-// FIX: Added explicit imports for classes within the same package
 
-
+/**
+ * This class acts as the main view and controller, which translates user actions from buttons and dialogs
+ * into method calls to the InventoryManager, which contains the core business logic. This class uses JavaFX
+ * properties in the Bracelet class to enable automatic updates to the inventory table.
+ */
 public class CeceCandiCornerGUI extends Application {
 
     private InventoryManager inventoryManager;
@@ -588,6 +596,12 @@ public class CeceCandiCornerGUI extends Application {
         });
     }
 
+    /**
+     * This is the main entry point for the application.
+     * This method starts the JavaFX runtime and launches the application by calling the {@link Application#launch(String...)} method, which then in turn
+     * creates an instances of this class while also calling the {@link #start(Stage)} method.
+     * @param args Command-line arguments passed to the application (none currently used).
+     */
     public static void main(String[] args) {
         launch(args);
     }

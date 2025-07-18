@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="JavadocGenerationManager">
+    <option name="OUTPUT_DIRECTORY" value="$PROJECT_DIR$/javadoc" />
+    <option name="OPTION_SCOPE" value="public" />
+    <option name="OTHER_OPTIONS" value="-encoding utf8 -charset utf8 -docencoding utf8 -html5 -linksource --module-path &quot;C:\Users\denni\Desktop\Software Development I\javafx-sdk-17.0.15\lib&quot; --add-modules javafx.controls,javafx.fxml,javafx.graphics,java.sql" />
+  </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_17_PREVIEW" project-jdk-name="17" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>

@@ -5,21 +5,33 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 
 /**
- * Bracelet.java
- * Represents a single bracelet item in the inventory for Cece's Candi Corner.
- * This class encapsulates the properties of a bracelet and provides methods
- * to access and modify these properties.
- *
- * This version uses JavaFX Properties to enable automatic UI updates in TableViews.
- * Used by InventoryManager for data management
- * Displayed within CeceCandiCornerGUI's inventory table
+ * Represents a single bracelet in the inventory system.
+ * This class serves as the data model for a bracelet, encapsulating all relevant
+ * information for one inventory item, including its ID, description, quantity,
+ * price, and stock status.
+ * All fields are implemented using JavaFX {@code Property} types (i.e.,
+ * {@link javafx.beans.property.SimpleStringProperty}). This makes the object's
+ * properties observable, which is essential for binding them to JavaFX UI controls
+ * like {@code TableView}. When a property's value changes, the UI can be
+ * automatically updated.
+ * @see javafx.beans.property.SimpleStringProperty
+ * @see javafx.beans.property.SimpleIntegerProperty
+ * @see javafx.beans.property.SimpleDoubleProperty
  */
 public class Bracelet {
-    // Private fields using JavaFX Properties for observability
+    /** This acts as the Unique ID for the bracelet (i.e. 002) */
     private final SimpleStringProperty id;
+
+    /** The name of the bracelet and a brief description */
     private final SimpleStringProperty description;
+
+    /** This property represents the number of bracelets in stock */
     private final SimpleIntegerProperty quantity;
+
+    /** The retail price for a singular bracelet item */
     private final SimpleDoubleProperty price;
+
+    /** The current stock status of a bracelet item (i.e. 'In Stock' or 'Out of Stock') */
     private final SimpleStringProperty status;
 
     /**
