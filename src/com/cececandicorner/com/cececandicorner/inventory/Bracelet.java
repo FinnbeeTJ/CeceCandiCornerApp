@@ -11,6 +11,8 @@ import javafx.beans.property.SimpleStringProperty;
  * to access and modify these properties.
  *
  * This version uses JavaFX Properties to enable automatic UI updates in TableViews.
+ * Used by InventoryManager for data management
+ * Displayed within CeceCandiCornerGUI's inventory table
  */
 public class Bracelet {
     // Private fields using JavaFX Properties for observability
@@ -22,11 +24,11 @@ public class Bracelet {
 
     /**
      * Constructor to initialize a new Bracelet object.
-     * @param id The unique identifier for the bracelet.
+     * @param id          The unique identifier for the bracelet.
      * @param description A brief description or name of the bracelet.
-     * @param quantity The current stock quantity of the bracelet.
-     * @param price The selling price of the bracelet.
-     * @param status The stock status (e.g., "In Stock", "Out of Stock").
+     * @param quantity    The current stock quantity of the bracelet.
+     * @param price       The selling price of the bracelet.
+     * @param status      The stock status (e.g., "In Stock", "Out of Stock").
      */
     public Bracelet(String id, String description, int quantity, double price, String status) {
         this.id = new SimpleStringProperty(id);
@@ -37,6 +39,7 @@ public class Bracelet {
     }
 
     // --- Getter Methods (returning raw values) ---
+
     /**
      * Retrieves the unique ID of the bracelet.
      * @return The bracelet's ID.
@@ -78,6 +81,7 @@ public class Bracelet {
     }
 
     // --- Property Getter Methods (for TableView PropertyValueFactory) ---
+
     /**
      * Returns the SimpleStringProperty for the ID.
      * @return The ID property.
@@ -120,6 +124,7 @@ public class Bracelet {
 
 
     // --- Setter Methods (setting raw values, which updates the property) ---
+
     /**
      * Sets a new quantity for the bracelet.
      * @param newQuantity The new quantity to set.

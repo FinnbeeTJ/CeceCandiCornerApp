@@ -1,6 +1,9 @@
 /**
+ * Teddy Jones
+ * CEN 3024C
+ * Professor Evans
  * CeceCandiCornerGUI.java
- * This version has been updated to include JavaFX GUI capatibility (FKA CeceCandiCornerApp.java)
+ * This version has been updated to include JavaFX GUI compatibility (FKA CeceCandiCornerApp.java)
  * This is the main JavaFX application class for Cece's Candi Corner Inventory Management System.
  * It provides a graphical user interface for the user to interact with the InventoryManager.
  * This class handles all UI elements, user input, and displays results,

@@ -56,7 +56,7 @@ public class DatabaseManager {
     }
 
     /**
-     * Creates the 'bracelets' table if it does not already exist.
+     * Creates the 'bracelets' table for user if it does not already exist.
      * Assumes the table schema: id (TEXT PRIMARY KEY), description (TEXT),
      * quantity (INTEGER), price (REAL), status (TEXT).
      * @return true if table creation was successful or table already exists, false otherwise.
@@ -84,7 +84,7 @@ public class DatabaseManager {
 
     /**
      * Inserts a new bracelet into the database.
-     * @param bracelet The Bracelet object to insert.
+     * @param bracelet The bracelet object which is inserted.
      * @return true if insertion is successful, false otherwise.
      */
     public boolean insertBracelet(Bracelet bracelet) {
@@ -106,7 +106,7 @@ public class DatabaseManager {
 
     /**
      * Selects all bracelets from the database.
-     * @return A List of Bracelet objects, or an empty list if no bracelets found or an error occurs.
+     * @return A List of bracelet objects, or an empty list if no bracelets found or an error occurs.
      */
     public List<Bracelet> selectAllBracelets() {
         List<Bracelet> bracelets = new ArrayList<>();
@@ -133,7 +133,7 @@ public class DatabaseManager {
     /**
      * Selects a single bracelet by its ID.
      * @param id The ID of the bracelet to retrieve.
-     * @return The Bracelet object if found, null otherwise.
+     * @return The bracelet object if found, null otherwise.
      */
     public Bracelet selectBraceletById(String id) {
         String sql = "SELECT id, description, quantity, price, status FROM bracelets WHERE id = ?";
@@ -158,7 +158,7 @@ public class DatabaseManager {
 
     /**
      * Updates an existing bracelet in the database.
-     * @param bracelet The Bracelet object with updated values.
+     * @param bracelet The bracelet object with updated values.
      * @return true if update is successful, false otherwise.
      */
     public boolean updateBracelet(Bracelet bracelet) {
@@ -199,7 +199,7 @@ public class DatabaseManager {
     /**
      * Checks if a bracelet with the given ID already exists in the database.
      * @param id The ID to check.
-     * @return true if the ID exists, false otherwise.
+     * @return true if the ID exists, if not then return false.
      */
     public boolean doesIdExist(String id) {
         String sql = "SELECT COUNT(*) FROM bracelets WHERE id = ?";

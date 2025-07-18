@@ -4,13 +4,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/// InventoryManager.java
-/// Manages the inventory of Bracelet objects for Cece's Candi Corner.
-/// This class now interfaces with a DatabaseManager for persistent storage
-/// instead of an in-memory list or text files.
-/// It handles all core CRUD (Create, Read, Update, Delete) operations,
-/// and generates reports by delegating to the DatabaseManager.
-/// It includes robust input validation to ensure data integrity.
+/** InventoryManager.java
+* Manages the inventory of Bracelet objects for Cece's Candi Corner.
+* This class now interfaces with a DatabaseManager for persistent storage
+* instead of an in-memory list or text files.
+* It handles all core CRUD (Create, Read, Update, Delete) operations,
+* and generates reports by delegating to the DatabaseManager.
+* It includes robust input validation to ensure data integrity.
+*/
+
 public class InventoryManager {
     // No longer storing an in-memory list; operations delegate to database
     private DatabaseManager dbManager;
@@ -119,7 +121,6 @@ public class InventoryManager {
 
     /**
      * Adds a new bracelet to the database.
-     *
      * @param id The unique ID for the bracelet.
      * @param description A brief description or name of the bracelet.
      * @param quantityStr The current stock quantity of the bracelet.
